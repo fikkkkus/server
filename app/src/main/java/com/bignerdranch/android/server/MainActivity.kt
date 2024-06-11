@@ -19,22 +19,30 @@ import io.ktor.server.routing.routing
 import io.ktor.server.websocket.*
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+
+@Serializable
+data class GestureParams(var direction: Int, var distance: Int)
 
 class MainActivity : ComponentActivity() {
 
-    fun generateRandomParams(): String {
-        val param1 = (0..1).random() // Пример генерации рандомного числа от 1 до 10
-        val param2 = (1..100).random() // Пример генерации рандомного числа от 1 до 100
-        return "$param1.$param2" // Возвращаем два параметра, разделенные запятой
+    private fun generateRandomParams(): GestureParams {
+        val direction = (0..1).random()
+        val distance = (100..200).random()
+        return GestureParams(direction, distance)
     }
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
             ServerTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -43,24 +51,38 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        startWebSocketServer()
+    }
 
+    private fun startWebSocketServer() {
         embeddedServer(Netty, host = "192.168.0.102", port = 8080) {
             install(WebSockets)
 
             routing {
                 webSocket("/ws") {
-                    // Ожидание готовности клиента
-                    for (frame in incoming) {
-                        frame as? Frame.Text ?: continue
-                        val receivedText = frame.readText()
-                        Log.e("Received", receivedText)
-
-                        val responseText = generateRandomParams()
-                        outgoing.send(Frame.Text(responseText))
-                    }
+                    handleWebSocketConnection()
                 }
             }
         }.start(wait = false)
+    }
+
+    private suspend fun DefaultWebSocketServerSession.handleWebSocketConnection() {
+        try {
+            for (frame in incoming) {
+                frame as? Frame.Text ?: continue
+                val receivedText = frame.readText()
+
+                val gestureParams = generateRandomParams()
+                val gestureParamsJson = Json.encodeToString(gestureParams)
+
+                delay(1000)
+                outgoing.send(Frame.Text(gestureParamsJson))
+            }
+        } catch (e: Exception) {
+            Log.e("WebSocket", "Error in WebSocket connection: ${e.localizedMessage}")
+        } finally {
+            Log.e("WebSocket", "WebSocket connection closed")
+        }
     }
 }
 

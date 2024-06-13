@@ -76,5 +76,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.2")
     implementation("io.ktor:ktor-server-websockets:3.0.0-beta-1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation("androidx.sqlite:sqlite:2.1.0")
+
+    implementation("com.google.guava:guava:31.1-android")
 
 }
